@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>イベント精算システム（高視認性デザイン版）</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            overflow-x: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        /* 1. チケットテーブルのデザイン */
+        table {
+            width: 100% !important;
+            max-width: 1400px;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 5px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px 3px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #eee;
+            font-size: 0.85em;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: right;
+            box-sizing: border-box;
+            font-size: 1.2em;
+        }
+
+        /* チケット列幅設定 */
+        th:nth-child(1) {
+            width: 90px;
+        }
+
+        th:nth-child(2) {
+            width: 100px;
+        }
+
+        th:nth-child(3) {
+            width: 65px;
+        }
+
+        th:nth-child(4) {
+            width: 50px;
+        }
+
+        th:nth-child(5) {
+            width: 100px;
+        }
+
+        th:nth-child(6) {
+            width: 300px;
+        }
+
+        th:nth-child(7) {
+            width: 100px;
+        }
+
+        th:nth-child(8) {
+            width: 55px;
+        }
+
+        th:nth-child(9) {
+            width: 90px;
+        }
+
+        /* e+ 計算式ルビ（省略なし） */
+        .formula-text {
+            font-size: 0.95em;
+            text-align: left;
+            white-space: nowrap;
+            padding: 15px 8px;
+            color: #2c3e50;
+        }
+
+        .formula-text ruby {
+            display: inline-flex;
+            flex-direction: column-reverse;
+            vertical-align: bottom;
+            ruby-position: over;
+            margin: 0 4px;
+        }
+
+        .formula-text rt {
+            display: block;
+            font-size: 1.0em;
+            color: #e67e22;
+            text-align: center;
+            padding-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+            font-weight: bold;
+        }
+
+        .btn-add {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-del {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        /* チケット合計行（tfoot）の数字をさらに強調 */
+        tfoot input {
+            font-size: 1.4em !important;
+            font-weight: 900 !important;
+            background: #f1f2f6 !important;
+            color: #d35400 !important;
+            /* 精算合計の色 */
+            border: none !important;
+        }
+
+        /* プレイガイド名などの文字も少し調整 */
+        #ticket-body td {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        /* 飲食・総合計セクション（メイン強調・内訳コンパクト版） */
+        .direct-input-panel {
+            background: #fff;
+            margin: 5px 0 20px 0;
+            /* 上(5px) 左右(0) 下(20px) */
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 0;
+            /* ← ここを 0 にすることで、下の要素と密着します */
+        }
+
+        .summary-table td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+
+        .cell-label {
+            display: block;
+            text-align: left;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        /* メインの数値（1.8emで巨大化） */
+        .val-input-main {
+            width: 100%;
+            padding: 4px;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-align: right;
+            border: none;
+            background: transparent;
+            font-family: 'Courier New', monospace;
+            box-sizing: border-box;
+        }
+
+        /* 内訳の数値（1.2emでコンパクトに） */
+        .val-input-sub {
+            width: 100%;
+            padding: 2px 4px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: right;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            box-sizing: border-box;
+            background: #fff;
+        }
+
+        .drink-group-bg {
+            background-color: #fff9db !important;
+        }
+
+        .total-cell {
+            background-color: #fff5f5;
+        }
+
+        .total-cell .val-input-main {
+            color: #d63031;
+        }
+
+        /* 下段：表に密着させるスタイル */
+        .fnb-sub-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 15px;
+            /* 余白を最小限に */
+            border-top: 1px solid #ccc;
+            /* 表の底辺と繋がる線 */
+        }
+
+        .relation-symbol {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        .sub-label-mini {
+            font-size: 0.75em;
+            font-weight: bold;
+            color: #666;
+            margin-right: 5px;
+        }
+
+
+
+        /* 3. PayPay・現金照合 */
+        .summary-card {
+            background: #fff;
+            border: 2px solid #2ecc71;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .paypay-calc-zone {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>イベント精算報告書</h1>
+
+        <!-- チケットセクション：端数処理を一列に配置（さらにコンパクト化） -->
+        <div class="rounding-controls"
+            style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-bottom: 6px; background: #fff; padding: 4px 12px; border-radius: 6px; border: 1px solid #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <span style="font-size: 0.9em; font-weight: bold; color: #555;">手数料端数処理：</span>
+            <label style="display: flex; align-items: center; cursor: pointer; font-size: 1.0em; font-weight: bold;">
+                <input type="radio" name="rounding" value="floor" checked onchange="updateAll()"
+                    style="width: 16px; height: 16px; margin-right: 4px; cursor: pointer;">
+                切り捨て
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; font-size: 1.0em; font-weight: bold;">
+                <input type="radio" name="rounding" value="ceil" onchange="updateAll()"
+                    style="width: 16px; height: 16px; margin-right: 4px; cursor: pointer;">
+                切り上げ
+            </label>
+        </div>
+
+        <!-- A. チケット精算テーブル -->
+        <table style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <!-- thのpaddingを上下4pxに抑え、line-heightで高さを固定 -->
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">プレイガイド</th>
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">券種メモ</th>
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">料金(A)</th>
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">枚数(B)</th>
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">売上(手無)</th>
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">計算式</th>
+                    <th style="padding: 4px 8px; line-height: 1.2; border-bottom: 2px solid #ddd;">精算額</th>
+                    <th
+                        style="padding: 4px 2px; font-size: 0.85em; border-bottom: 2px solid #ddd; width: 45px; text-align: center;">
+                        現金</th>
+                    <th
+                        style="padding: 4px 2px; font-size: 0.85em; border-bottom: 2px solid #ddd; width: 45px; text-align: center;">
+                        操作</th>
+                </tr>
+            </thead>
+            <tbody id="ticket-body">
+                <!-- JSで追加されるtr/tdも、padding: 2px 4px 程度にするとさらに縮まります -->
+            </tbody>
+            <tfoot>
+                <tr style="background:#f1f2f6; font-weight:bold;">
+                    <td colspan="4" style="text-align:right; font-size: 1.1em; padding: 4px 8px;">チケット合計</td>
+                    <td style="padding: 2px 4px;">
+                        <input type="text" id="raw-total" readonly tabindex="-1"
+                            style="color: #2c3e50; font-size: 1.2em; width: 100%; height: 28px; padding: 0 5px; border: 1px solid #ccc; background: #fff;">
+                    </td>
+                    <td style="text-align:right; font-size: 1.1em; padding: 4px 8px;">精算合計</td>
+                    <td style="padding: 2px 4px;">
+                        <input type="text" id="ticket-total" readonly tabindex="-1"
+                            style="color: #d35400; font-size: 1.2em; width: 100%; height: 28px; padding: 0 5px; border: 1px solid #ccc; background: #fff;">
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <style>
+            /* 動的に追加される行も細くするための指定 */
+            #ticket-body td {
+                padding: 2px 8px !important;
+                height: 30px;
+                /* 必要最低限の高さ */
+            }
+
+            #ticket-body input {
+                height: 26px !important;
+                padding: 2px 5px !important;
+            }
+        </style>
+
+        <!-- B. 飲食・総合計セクション（配色統一・コンパクト版） -->
+        <div class="direct-input-panel" style="margin-bottom: 0px !important;">
+            <table class="summary-table" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+                <!-- 一段目：メイン5項目 -->
+                <tr>
+                    <td class="drink-group-bg" style="padding: 2px 5px !important;">
+                        <span class="cell-label"
+                            style="font-size: 1.1em !important; font-weight: bold; margin-bottom: 0;">ドリンク売上</span>
+                        <input type="number" id="drink-pure-sales" class="val-input-main" value="0"
+                            oninput="calcFnB('pure')" style="height: 34px !important;">
+                    </td>
+                    <td style="padding: 2px 5px !important;">
+                        <span class="cell-label"
+                            style="font-size: 1.1em !important; font-weight: bold; margin-bottom: 0;">フード売上</span>
+                        <input type="number" id="food-sales" class="val-input-main" value="0" oninput="calcFnB('food')"
+                            style="height: 34px !important;">
+                    </td>
+                    <td style="padding: 2px 5px !important;">
+                        <span class="cell-label"
+                            style="font-size: 1.1em !important; font-weight: bold; margin-bottom: 0;">飲食合計</span>
+                        <input type="number" id="fnb-total" class="val-input-main" value="0" oninput="calcFnB('total')"
+                            style="background-color: #e8f8f5; height: 34px !important;">
+                    </td>
+                    <td style="padding: 2px 5px !important;">
+                        <span class="cell-label"
+                            style="font-size: 1.1em !important; font-weight: bold; margin-bottom: 0;">チケット合計</span>
+                        <input type="text" id="view-ticket-total-display" class="val-input-main" readonly tabindex="-1"
+                            style="height: 34px !important;">
+                    </td>
+                    <td class="total-cell" style="padding: 2px 5px !important;">
+                        <span class="cell-label"
+                            style="color:#d63031; font-size: 1.1em !important; font-weight: bold; margin-bottom: 0;">総合計</span>
+                        <input type="text" id="grand-total-display" class="val-input-main" readonly tabindex="-1"
+                            style="height: 34px !important;">
+                    </td>
+                </tr>
+
+                <!-- 二段目：バッジ計算行 -->
+                <tr>
+                    <!-- ドリンクバッジ合計枠 -->
+                    <td class="drink-group-bg"
+                        style="border-top: 1px solid rgba(0,0,0,0.1); padding: 2px 5px !important;">
+                        <span class="cell-label"
+                            style="font-size: 1.0em !important; font-weight: bold; margin-bottom: 0;">ドリンクバッジ(<span
+                                id="view-batch-count">0</span>)枚</span>
+                        <input type="number" id="batch-fee" class="val-input-main" readonly tabindex="-1"
+                            style="background: transparent; font-weight: 900; height: 30px !important; border:none;">
+                    </td>
+                    <!-- バッジ計算エリア（背景色をドリンク関連と統一） -->
+                    <td colspan="4" class="drink-group-bg"
+                        style="border-top: 1px solid rgba(0,0,0,0.1); border-left: 1px dashed rgba(0,0,0,0.1); vertical-align: middle; padding: 0 15px !important;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.0em; font-weight: bold; color: #444;">内訳計算：</span>
+                            <span style="font-size: 0.9em;">¥</span>
+                            <input type="number" id="batch-price" class="val-input-sub" value="0"
+                                oninput="updateBatchInfo()"
+                                style="width: 100px; text-align: center; font-size: 1.3em !important; font-weight: 900 !important; height: 28px; background: #fff; border: 1px solid #ccc;">
+                            <span style="font-size: 1.2em; font-weight: bold;">×</span>
+                            <input type="number" id="batch-count" class="val-input-sub" value="0"
+                                oninput="updateBatchInfo()"
+                                style="width: 80px; text-align: center; font-size: 1.3em !important; font-weight: 900 !important; height: 28px; background: #fff; border: 1px solid #ccc;">
+                            <span style="font-size: 1.0em; font-weight: bold;">枚</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <script>
+            function updateBatchInfo() {
+                const price = parseFloat(document.getElementById('batch-price').value) || 0;
+                const count = parseFloat(document.getElementById('batch-count').value) || 0;
+                document.getElementById('view-batch-count').textContent = count;
+                const total = price * count;
+                document.getElementById('batch-fee').value = total;
+                if (typeof calcFnB === 'function') { calcFnB('batch'); }
+            }
+        </script>
+
+        <!-- C. 現金照合セクション（極限スリム版） -->
+        <div class="summary-card" style="padding: 4px 10px; margin-top: 2px;">
+
+            <!-- 上段：タイトルと基礎売上（高さを圧縮） -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                <div style="font-weight: bold; color: #27ae60; font-size: 1.0em;">【現金照合】</div>
+
+                <div
+                    style="background: #f1f2f6; padding: 1px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;">
+                    <div style="display: flex; align-items: baseline;">
+                        <span style="font-size: 1.2em; color: #666; margin-right: 2px;">飲食</span>
+                        <span style="font-size: 1.2em; font-weight: 800;">¥<span id="formula-fnb">0</span></span>
+                    </div>
+                    <div style="font-size: 1.2em; font-weight: bold; color: #3a3939;">+</div>
+                    <div style="display: flex; align-items: baseline;">
+                        <span style="font-size: 1.2em; color: #666; margin-right: 2px;">チケ</span>
+                        <span style="font-size: 1.2em; font-weight: 800;">¥<span
+                                id="formula-cash-ticket">0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中段：キャッシュレス（枠の上下余白を0に近く） -->
+            <div
+                style="display: flex; align-items: center; background: #fff5f5; padding: 2px 6px; border-radius: 6px; margin-bottom: 4px; border: 1px solid #fab1a0; gap: 4px;">
+
+                <span style="font-size: 0.9em; font-weight: 900; color: #d63031;">PayPay</span>
+                <input type="number" id="paypay-now" oninput="updateAll()" placeholder="現在"
+                    style="width:90px; height: 26px; font-size: 1.3em; font-weight:900; text-align: center; border: 1px solid #ddd; padding: 0;">
+                <span style="font-size: 1.5em; font-weight: 900; color: #d63031; margin: 0 2px;">-</span>
+                <input type="number" id="paypay-prev" oninput="updateAll()" placeholder="前回"
+                    style="width:90px; height: 26px; font-size: 1.3em; font-weight:900; text-align: center; border: 1px solid #ddd; padding: 0;">
+
+                <div style="border-left: 1px solid #fab1a0; height: 18px; margin: 0 2px;"></div>
+
+                <span style="font-size: 0.9em; font-weight: 900; color: #0984e3;">他レジから抜いた額があれば</span>
+                <input type="number" id="other-cashless" oninput="updateAll()"
+                    style="width:80px; height: 26px; font-size: 1.3em; font-weight:900; text-align: center; border: 1px solid #ddd; padding: 0;">
+
+                <div style="margin-left: auto; font-weight: 900; color: #d63031; font-size: 1.2em;">
+                    <span style="font-size: 1em; vertical-align: middle;">引く</span>¥<span id="cashless-sum">0</span>
+                </div>
+            </div>
+
+            <!-- 下段：最終結果（高さを抑えつつ数字を強調） -->
+            <div
+                style="background: #2c3e50; color: white; padding: 2px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: bold; font-size: 0.9em;">あるべき現金</span>
+                <span style="font-size: 1.8em; font-weight: 900; font-family: sans-serif;">
+                    <span style="font-size: 0.6em; margin-right: 1px;">¥</span><span id="cash-total">0</span>
+                </span>
+            </div>
+        </div>
+
+
+        <div
+            tyle="margin: 5px auto; padding: 10px; border: 2px solid #333; background: #fff; max-width: 400px; box-sizing: border-box;">
+            <div style="font-size: 14px; font-weight: bold; border-bottom: 2px solid #333; margin-bottom: 8px;">📝
+                計算メモ</div>
+
+            <div id="free-calc-container" style="background: #fafafa; border: 1px solid #ccc; padding: 5px;">
+                <!-- 初期行 -->
+                <div class="calc-memo-block"
+                    style="margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px;">
+                    <!-- 式の入力：幅いっぱいに使い、長ければ自動で折り返す -->
+                    <textarea class="memo-expr" oninput="processMemo(this)" onkeydown="checkKey(event, this)"
+                        placeholder="式を入力 (例: 15000+3000-500)"
+                        style="width: 100%; font-size: 20px; font-weight: 900; border: none; background: transparent; outline: none; resize: none; overflow: hidden; line-height: 1.2; font-family: sans-serif; height: auto;"></textarea>
+                    <!-- 結果：右下に大きく表示 -->
+                    <div class="memo-res"
+                        style="text-align: right; font-size: 22px; font-weight: 900; color: #c0392b; font-family: monospace; min-height: 26px;">
+                    </div>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #888; margin-top: 5px;">※Enterで次の計算、空でBackspaceなら上の行を削除。</div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- 金種計算セクション（ジャストサイズ版） -->
+    <div
+        style="margin: 5px auto; padding: 4px; border: 2px solid #333; background: #f9f9f9; max-width: 380px; box-sizing: border-box;">
+        <h3
+            style="margin: 0 0 4px 0; font-size: 14px; text-align: center; line-height: 1.2; border-bottom: 1px solid #ccc;">
+            レジ残金カウント</h3>
+
+        <style>
+            /* スピンボタン完全削除 */
+            input::-webkit-outer-spin-button,
+            input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+
+            input[type=number] {
+                -moz-appearance: textfield !important;
+                appearance: textfield !important;
+            }
+
+            .denom-v-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: #fff;
+            }
+
+            .denom-v-table td {
+                padding: 0 4px !important;
+                border: 1px solid #ccc;
+                /* ここが「間」のサイズ：文字22pxに対して上下1.5pxずつの余裕 */
+                height: 30px;
+                vertical-align: middle;
+            }
+
+            .denom-label {
+                background: #eee;
+                font-weight: bold;
+                width: 80px;
+                text-align: center;
+                font-size: 19px;
+                /* 20pxから微調整 */
+                line-height: 25px;
+            }
+
+            .denom-v-table input.denom-count {
+                width: 100%;
+                height: 25px;
+                font-size: 22px;
+                /* 数字の大きさは維持 */
+                font-weight: bold;
+                text-align: center;
+                border: none !important;
+                background: transparent;
+                display: block;
+                padding: 0;
+                line-height: 25px;
+            }
+
+            .denom-sub-val {
+                width: 100%;
+                height: 25px;
+                color: #000;
+                font-size: 21px;
+                /* 右側の合計も微調整 */
+                font-weight: bold;
+                text-align: right;
+                border: none !important;
+                background: transparent;
+                display: block;
+                line-height: 25px;
+            }
+
+            .calc-area {
+                margin-top: 3px;
+                padding: 2px 8px;
+                background: #fff;
+                border: 1px solid #333;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .diff-check-area {
+                margin-top: 3px;
+                padding: 4px 8px;
+                background: #eee;
+                border: 1px solid #999;
+            }
+        </style>
+
+        <table class="denom-v-table">
+            <tbody>
+                <!-- すべての行を25pxで統一 -->
+                <tr>
+                    <td class="denom-label">10,000</td>
+                    <td><input type="number" class="denom-count" data-unit="10000" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">5,000</td>
+                    <td><input type="number" class="denom-count" data-unit="5000" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">2,000</td>
+                    <td><input type="number" class="denom-count" data-unit="2000" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">1,000</td>
+                    <td><input type="number" class="denom-count" data-unit="1000" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">500</td>
+                    <td><input type="number" class="denom-count" data-unit="500" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">100</td>
+                    <td><input type="number" class="denom-count" data-unit="100" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">50</td>
+                    <td><input type="number" class="denom-count" data-unit="50" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">10</td>
+                    <td><input type="number" class="denom-count" data-unit="10" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label">5</td>
+                    <td><input type="number" class="denom-count" data-unit="5" oninput="updateAll()"></td>
+                    <td><input type="text" class="denom-subtotal denom-sub-val" readonly tabindex="-1"></td>
+                </tr>
+                <tr>
+                    <td class="denom-label" style="border-bottom: none;">1</td>
+                    <td style="border-bottom: none;"><input type="number" class="denom-count" data-unit="1"
+                            oninput="updateAll()"></td>
+                    <td style="border-bottom: none;"><input type="text" class="denom-subtotal denom-sub-val" readonly
+                            tabindex="-1"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="calc-area">
+            <div style="font-size: 15px; font-weight: bold;">合計</div>
+            <div style="font-weight: bold;"><span id="cash-in-register" style="font-size: 24px;">0</span> 円</div>
+        </div>
+
+        <div class="diff-check-area">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; font-weight: bold;">準備金：</span>
+                <input type="number" id="initial-cash" oninput="updateAll()"
+                    style="width: 110px; height: 26px; text-align: right; font-size: 20px; font-weight: bold; border: 1px solid #999; padding-right: 4px;">
+            </div>
+            <div id="diff-display"
+                style="margin-top: 5px; padding: 5px; border-top: 1px dashed #999; text-align: right; font-size: 16px; display: none;">
+            </div>
+        </div>
+
+
+
+
+        <script>
+            const pgSettings = {
+                'eplus': { name: 'e+', isCash: false },
+                'sumaticke': { name: 'e+スマチケ', isCash: false },
+                'livepocket': { name: 'ライポケ', isCash: false },
+                'reserve': { name: '予約', isCash: true },
+                'today': { name: '当日', isCash: true }
+            };
+
+            window.onload = () => {
+                ['eplus', 'sumaticke', 'livepocket', 'reserve', 'today'].forEach(key => addRow(key, true));
+                updateAll();
+                setupEnterNavigation(); // Enter移動の初期化
+            };
+
+            // --- 1. Enterキー移動と入力制限の設定 ---
+            function setupEnterNavigation() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        // メモ欄(textarea)は既存の挙動(行追加)を優先
+                        if (e.target.tagName === 'TEXTAREA') return;
+
+                        e.preventDefault();
+                        const focusable = Array.from(document.querySelectorAll('input:not([readonly]):not([type="checkbox"])'));
+                        const index = focusable.indexOf(e.target);
+                        if (index > -1 && index < focusable.length - 1) {
+                            focusable[index + 1].focus();
+                            if (focusable[index + 1].select) focusable[index + 1].select();
+                        }
+                    }
+                });
+
+                // 数字入力制限（全角→半角変換と、数字以外のブロック）
+                document.addEventListener('input', (e) => {
+                    if (e.target.type === 'number') {
+                        // 全角を半角に変換
+                        let val = e.target.value.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+                        // 数字以外を削除
+                        e.target.value = val.replace(/[^0-9.]/g, '');
+                    }
+                });
+            }
+
+            function addRow(key, isFirst = false, ref = null) {
+                const tr = document.createElement('tr');
+                tr.dataset.type = key;
+                tr.innerHTML = `
+                    <td style="font-weight:bold;">${pgSettings[key].name}</td>
+                    <td><input type="text" placeholder="メモ" style="text-align:left;"></td>
+                    <td><input type="number" class="price" value="0" oninput="updateAll()"></td>
+                    <td><input type="number" class="count" value="0" oninput="updateAll()"></td>
+                    <td><input type="text" class="raw-sales" readonly tabindex="-1"></td>
+                    <td class="formula-text"></td>
+                    <td><input type="text" class="subtotal" readonly tabindex="-1"></td>
+                    <td><input type="checkbox" class="cash-checkbox" ${pgSettings[key].isCash ? 'checked' : ''} onchange="updateAll()"></td>
+                    <td>
+                        <button class="btn btn-add" onclick="addRow('${key}', false, this.closest('tr'))">＋</button>
+                        ${isFirst ? '' : '<button class="btn btn-del" onclick="this.closest(\'tr\').remove(); updateAll();">×</button>'}
+                    </td>
+                `;
+                if (ref) ref.after(tr); else document.getElementById('ticket-body').appendChild(tr);
+            }
+
+            function calcFnB(type) {
+                const p = document.getElementById('drink-pure-sales'), bp = document.getElementById('batch-price'), bc = document.getElementById('batch-count'), bf = document.getElementById('batch-fee'), f = document.getElementById('food-sales'), t = document.getElementById('fnb-total');
+                let pv = parseFloat(p.value) || 0, bprice = parseFloat(bp.value) || 0, bcount = parseFloat(bc.value) || 0, fv = parseFloat(f.value) || 0, tv = parseFloat(t.value) || 0;
+
+                let bFeeVal = bprice * bcount;
+                bf.value = bFeeVal;
+
+                if (type === 'total') { pv = tv - fv - bFeeVal; p.value = pv; }
+                else { tv = pv + bFeeVal + fv; t.value = tv; }
+                updateAll();
+            }
+
+            function updateAll() {
+                let tFinalTotal = 0, tRawTotal = 0, tCashOnlyTotal = 0;
+                const rounding = document.querySelector('input[name="rounding"]:checked')?.value || 'floor';
+                const roundFn = (rounding === 'floor') ? Math.floor : Math.ceil;
+
+                // --- 1. チケット計算 ---
+                document.querySelectorAll('#ticket-body tr').forEach(row => {
+                    const type = row.dataset.type;
+                    const price = parseFloat(row.querySelector('.price').value) || 0;
+                    const count = parseFloat(row.querySelector('.count').value) || 0;
+                    const isCash = row.querySelector('.cash-checkbox').checked;
+                    const raw = price * count;
+                    tRawTotal += raw;
+                    row.querySelector('.raw-sales').value = raw.toLocaleString();
+
+                    let sub = 0, formula = "";
+                    const sL = raw === 0 ? "売上" : raw.toLocaleString() + "円";
+                    const cL = count === 0 ? "枚" : count.toLocaleString() + "枚";
+
+                    if (type === 'eplus') {
+                        const sBase = raw * 0.95;
+                        const fBase = (count * 10) * 1.08;
+                        sub = sBase - fBase;
+                        formula = `<ruby>${sL} × 0.95<rt>${Math.floor(sBase).toLocaleString()}</rt></ruby> - (<ruby>${cL} × ¥10 × 1.08<rt>${Math.floor(fBase).toLocaleString()}</rt></ruby>)`;
+                    } else if (type === 'sumaticke' || type === 'livepocket') {
+                        sub = raw * 0.95;
+                        formula = `<ruby>${sL} × 0.95<rt>${Math.floor(sub).toLocaleString()}</rt></ruby>`;
+                    } else {
+                        sub = raw;
+                        formula = `${sL} × 100%`;
+                    }
+
+                    const val = Math.max(0, roundFn(sub));
+                    row.querySelector('.subtotal').value = val.toLocaleString();
+                    row.querySelector('.formula-text').innerHTML = formula;
+
+                    tFinalTotal += val;
+                    if (isCash) tCashOnlyTotal += val;
+                });
+
+                document.getElementById('raw-total').value = tRawTotal.toLocaleString();
+                document.getElementById('ticket-total').value = tFinalTotal.toLocaleString();
+
+
+                // --- 2. 飲食データ ---
+                const pureInput = document.getElementById('drink-pure-sales');
+                const pure = pureInput ? parseFloat(pureInput.value) || 0 : 0;
+                const batchFee = parseFloat(document.getElementById('batch-fee').value) || 0;
+                const batchCount = document.getElementById('batch-count').value || 0;
+                const food = parseFloat(document.getElementById('food-sales').value) || 0;
+                const fnbTotal = parseFloat(document.getElementById('fnb-total').value) || 0;
+
+                // --- 3. メイン集計表示（横並びエリア）への反映 ---
+                // 飲食合計（純売上 + バッチ）
+                const drinkTotal = pure + batchFee;
+                const vDrinkTotal = document.getElementById('view-drink-total');
+                if (vDrinkTotal) vDrinkTotal.value = drinkTotal.toLocaleString();
+
+                // チケット合計
+                const vTicketDisp = document.getElementById('view-ticket-total-display');
+                if (vTicketDisp) vTicketDisp.value = tFinalTotal.toLocaleString();
+
+                // 総売上（チケット最終合計 + 飲食最終合計）
+                const vGrandDisp = document.getElementById('grand-total-display');
+                if (vGrandDisp) vGrandDisp.value = (tFinalTotal + fnbTotal).toLocaleString();
+
+                // バッチ数
+                const vBatchCount = document.getElementById('view-batch-count');
+                if (vBatchCount) vBatchCount.textContent = batchCount;
+
+
+
+                // --- 3. 現金照合 ---
+                const fFnb = document.getElementById('formula-fnb');
+                if (fFnb) fFnb.textContent = fnbTotal.toLocaleString();
+
+                const fCashTicket = document.getElementById('formula-cash-ticket');
+                if (fCashTicket) fCashTicket.textContent = tCashOnlyTotal.toLocaleString();
+
+                const cashSubtotal = fnbTotal + tCashOnlyTotal;
+                const fCashSub = document.getElementById('formula-cash-subtotal');
+                if (fCashSub) fCashSub.textContent = cashSubtotal.toLocaleString();
+
+                // PayPay & 他決済
+                const pNow = parseFloat(document.getElementById('paypay-now').value) || 0;
+                const pPrev = parseFloat(document.getElementById('paypay-prev').value) || 0;
+                const pResult = pNow - pPrev;
+                if (document.getElementById('paypay-result')) document.getElementById('paypay-result').textContent = pResult.toLocaleString();
+
+                const otherCashless = parseFloat(document.getElementById('other-cashless').value) || 0;
+                const totalCashless = pResult + otherCashless;
+                if (document.getElementById('cashless-sum')) document.getElementById('cashless-sum').textContent = totalCashless.toLocaleString();
+
+                // あるべき現金
+                const finalCashTotal = cashSubtotal - totalCashless;
+                if (document.getElementById('cash-total')) document.getElementById('cash-total').textContent = finalCashTotal.toLocaleString();
+
+                // --- 4. 金種計算 ---
+                let totalInRegister = 0;
+                document.querySelectorAll('input.denom-count').forEach(input => {
+                    const unit = parseInt(input.getAttribute('data-unit')) || 0;
+                    const count = parseInt(input.value) || 0;
+                    const subtotal = unit * count;
+                    totalInRegister += subtotal;
+                    const row = input.closest('tr');
+                    if (row) {
+                        const subDisp = row.querySelector('.denom-subtotal');
+                        if (subDisp) subDisp.value = subtotal > 0 ? subtotal.toLocaleString() : "";
+                    }
+                });
+
+                if (document.getElementById('cash-in-register')) document.getElementById('cash-in-register').textContent = totalInRegister.toLocaleString();
+
+                // 準備金との差額計算
+                const initialInput = document.getElementById('initial-cash');
+                if (initialInput) {
+                    const initialCash = parseInt(initialInput.value) || 0;
+                    const actualSales = totalInRegister - initialCash;
+                    const diffDisp = document.getElementById('diff-display');
+                    if (diffDisp) {
+                        diffDisp.style.display = initialCash > 0 ? 'block' : 'none';
+                        diffDisp.innerHTML = `現金売上分: <strong>${actualSales.toLocaleString()}</strong> 円`;
+                    }
+                }
+            }
+
+            // メモ欄（計算機）
+            function processMemo(el) {
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+                const row = el.parentElement;
+                const resDisp = row.querySelector('.memo-res');
+                let s = el.value.replace(/×/g, '*').replace(/÷/g, '/').replace(/－|ー/g, '-').replace(/[０-９]/g, m => String.fromCharCode(m.charCodeAt(0) - 0xFEE0));
+                let clean = s.replace(/[^0-9+\-*/().\s]/g, '');
+                try {
+                    if (clean.trim() === "") { resDisp.textContent = ""; }
+                    else {
+                        let res = Function(`'use strict'; return (${clean})`)() || 0;
+                        resDisp.textContent = "= " + Math.floor(res).toLocaleString();
+                    }
+                } catch (e) { resDisp.textContent = ""; }
+            }
+
+            function checkKey(e, el) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const newBlock = document.createElement('div');
+                    newBlock.className = 'calc-memo-block';
+                    newBlock.style = "margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px;";
+                    newBlock.innerHTML = `
+                        <textarea class="memo-expr" oninput="processMemo(this)" onkeydown="checkKey(event, this)"
+                            style="width: 100%; font-size: 20px; font-weight: 900; border: none; background: transparent; outline: none; resize: none; overflow: hidden; line-height: 1.2; font-family: sans-serif; height: 30px;"></textarea>
+                        <div class="memo-res" style="text-align: right; font-size: 22px; font-weight: 900; color: #c0392b; font-family: monospace; min-height: 26px;"></div>
+                    `;
+                    el.parentElement.after(newBlock);
+                    newBlock.querySelector('textarea').focus();
+                } else if (e.key === 'Backspace' && el.value === '') {
+                    const prevBlock = el.parentElement.previousElementSibling;
+                    if (prevBlock && prevBlock.classList.contains('calc-memo-block')) {
+                        e.preventDefault();
+                        const prevInput = prevBlock.querySelector('textarea');
+                        prevInput.focus();
+                        prevInput.selectionStart = prevInput.selectionEnd = prevInput.value.length;
+                        el.parentElement.remove();
+                    }
+                }
+            }
+        </script>
+
+</body>
+
+</html>
